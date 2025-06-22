@@ -4,9 +4,11 @@ import (
 	"context"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"cis-engine/internal/api"
-	"cis-engine/internal/search"
+	"cis-engine/internal/indexer"
 	"cis-engine/internal/storage/postgres"
 
 	"github.com/joho/godotenv"
@@ -28,15 +30,18 @@ func main() {
 		log.Fatalf("Не удалось подключиться к базе данных: %v", err)
 	}
 	defer db.Close()
-	log.Println("Успешное подключение к базе данных.")
+	log.Println("Индексатор: Успешное подключение к базе данных.")
 
-	searchService := search.NewService(db)
-	apiHandler := api.NewHandler(searchService)
-	router := api.NewRouter(apiHandler)
+	app := indexer.NewIndexer(db, 2*time.Second)
 
-	serverAddr := ":8080"
-	log.Printf("Запуск API сервера на http://localhost%s", serverAddr)
-	if err := router.Run(serverAddr); err != nil {
-		log.Fatalf("Не удалось запустить сервер: %v", err)
-	}
+	go app.Start(ctx)
+
+	log.Println("Индексатор запущен. Нажмите CTRL+C для остановки.")
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Получен сигнал завершения, остановка индексатора...")
+	app.Stop()
+	log.Println("Индексатор успешно остановлен.")
 }

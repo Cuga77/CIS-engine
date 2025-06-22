@@ -44,5 +44,16 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  indexer:
+    build: .
+    container_name: cis_indexer
+    command: /indexer
+    environment:
+      DATABASE_URL: "postgres://user:password@db:5432/cis_engine"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:

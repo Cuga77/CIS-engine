@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"cis-engine/internal/storage"
 	"context"
 	"errors"
 	"io"
@@ -14,21 +15,10 @@ import (
 	"golang.org/x/time/rate"
 )
 
-var errNotHttp = errors.New("non-http scheme")
-
-type Storer interface {
-	StorerPage(ctx context.Context, page *Page) (int64, error)
-}
-
-type Fetcher interface {
-	Fatch(ctx context.Context, url string) (context io.ReadCloser, err error)
-}
-
 type Page struct {
-	ID    int64
 	URL   string
 	Title string
-	Body  string //без HTML тегов
+	Body  string
 }
 
 type Crawler struct {
@@ -36,22 +26,22 @@ type Crawler struct {
 	results chan *Page
 	wg      sync.WaitGroup
 	limiter *rate.Limiter
-	storage Storer
+	storage storage.Storer
 	fetcher Fetcher
 	visited *VisitedCache
 
 	workers int
 }
 
-func NewCrawler(workers int, requestsPerSec int, storage Storer, fetcher Fetcher) *Crawler {
+func NewCrawler(workers int, requestsPerSec int, s storage.Storer, f Fetcher) *Crawler {
 	limiter := rate.NewLimiter(rate.Every(time.Second/time.Duration(requestsPerSec)), 1)
 
 	return &Crawler{
 		jobs:    make(chan string, workers*2),
 		results: make(chan *Page, workers*2),
 		limiter: limiter,
-		storage: storage,
-		fetcher: fetcher,
+		storage: s,
+		fetcher: f,
 		workers: workers,
 		visited: NewVisitedCache(),
 	}
@@ -123,7 +113,12 @@ func (c *Crawler) processResults(ctx context.Context) {
 	defer c.wg.Done()
 
 	for page := range c.results {
-		if _, err := c.storage.StorePage(ctx, page); err != nil {
+		pageToStore := &storage.Page{
+			URL:   page.URL,
+			Title: page.Title,
+			Body:  page.Body,
+		}
+		if _, err := c.storage.StorePage(ctx, pageToStore); err != nil {
 			log.Printf("Ошибка сохранения страницы %s: %v", page.URL, err)
 		} else {
 			log.Printf("Страница %s успешно сохранена", page.URL)
@@ -174,6 +169,8 @@ func (c *Crawler) parseHTML(baseURL string, body io.Reader) (string, string, []s
 	f(doc)
 	return strings.TrimSpace(title), strings.Join(strings.Fields(text.String()), " "), links
 }
+
+var errNotHttp = errors.New("non-http scheme")
 
 func resolveURL(base, relative string) (string, error) {
 	baseURL, err := url.Parse(base)

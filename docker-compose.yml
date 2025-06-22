@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14-alpine
+    container_name: cis_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cis_engine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./internal/storage/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d cis_engine"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: cis_api
+    command: /api
+    ports:
+      - "8081:8080"
+    environment:
+      DATABASE_URL: "postgres://user:password@db:5432/cis_engine"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  crawler:
+    build: .
+    container_name: cis_crawler
+    command: /crawler
+    environment:
+      DATABASE_URL: "postgres://user:password@db:5432/cis_engine"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

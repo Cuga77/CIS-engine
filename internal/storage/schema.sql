@@ -5,6 +5,7 @@ SET client_min_messages TO WARNING;
 CREATE TABLE IF NOT EXISTS pages (
     id BIGSERIAL PRIMARY KEY,
     url TEXT NOT NULL UNIQUE,
+    title TEXT,
     html_content TEXT,
     last_crawled_at TIMESTAMPTZ,
     is_indexed BOOLEAN DEFAULT FALSE NOT NULL,
@@ -13,7 +14,7 @@ CREATE TABLE IF NOT EXISTS pages (
 
 -- Индекс для ускорения поиска по URL
 CREATE INDEX IF NOT EXISTS idx_pages_url ON pages(url);
--- Индекс для выборки неиндексированных страниц
+-- Индекс для быстрой выборки неиндексированных страниц
 CREATE INDEX IF NOT EXISTS idx_pages_not_indexed ON pages(id) WHERE is_indexed = FALSE;
 
 -- Таблица для хранения графа ссылок (какая страница на какую ссылается)

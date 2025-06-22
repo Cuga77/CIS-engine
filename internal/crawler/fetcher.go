@@ -1,14 +1,22 @@
 package crawler
 
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+)
+
 type Fetcher interface {
-	Fetch{ctx context.Context, url string} (context io.ReadCloser, err error)
+	Fetch(ctx context.Context, url string) (io.ReadCloser, error)
 }
 
-type HTTPFetcher interface {
+type HTTPFetcher struct {
 	client *http.Client
 }
 
-type NewHTTPFetcher(timeout time.Duration) *HTTPFetcher {
+func NewHTTPFetcher(timeout time.Duration) *HTTPFetcher {
 	return &HTTPFetcher{
 		client: &http.Client{
 			Timeout: timeout,

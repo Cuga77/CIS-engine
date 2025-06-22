@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"cis-engine/internal/api"
 	"cis-engine/internal/search"
 	"cis-engine/internal/storage/postgres"
 
@@ -30,8 +31,8 @@ func main() {
 	log.Println("Успешное подключение к базе данных.")
 
 	searchService := search.NewService(db)
-	apiHandler := NewHandler(searchService)
-	router := NewRouter(apiHandler)
+	apiHandler := api.NewHandler(searchService)
+	router := api.NewRouter(apiHandler)
 
 	serverAddr := ":8080"
 	log.Printf("Запуск API сервера на http://localhost%s", serverAddr)

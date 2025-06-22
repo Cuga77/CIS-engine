@@ -40,8 +40,7 @@ func (db *DB) StorePage(ctx context.Context, page *storage.Page) (int64, error) 
 		SET html_content = EXCLUDED.html_content,
 			title = EXCLUDED.title,
 		    last_crawled_at = EXCLUDED.last_crawled_at,
-			-- Сбрасываем tsvector при обновлении, чтобы страница переиндексировалась
-			content_tsvector = NULL 
+			content_tsvector = NULL
 		RETURNING id
 	`
 	var pageID int64
@@ -68,7 +67,6 @@ func (db *DB) GetNextPageToIndex(ctx context.Context) (*storage.Page, error) {
 func (db *DB) UpdatePageVector(ctx context.Context, page *storage.Page) error {
 	query := `
 		UPDATE pages
-		-- Используем coalesce для объединения заголовка и контента, чтобы искать по обоим
 		SET content_tsvector = to_tsvector('russian', coalesce(title, '') || ' ' || coalesce(html_content, ''))
 		WHERE id = $1
 	`
@@ -81,11 +79,10 @@ func (db *DB) UpdatePageVector(ctx context.Context, page *storage.Page) error {
 
 func (db *DB) SearchPages(ctx context.Context, query string) ([]*storage.Page, error) {
 	sql := `
-		SELECT 
-			id, 
-			url, 
+		SELECT
+			id,
+			url,
 			title,
-			-- ts_rank вычисляет релевантность документа запросу
 			ts_rank(content_tsvector, websearch_to_tsquery('russian', $1)) as rank
 		FROM pages
 		WHERE content_tsvector @@ websearch_to_tsquery('russian', $1)
@@ -101,7 +98,7 @@ func (db *DB) SearchPages(ctx context.Context, query string) ([]*storage.Page, e
 	var pages []*storage.Page
 	for rows.Next() {
 		var p storage.Page
-		var rank float32 // ts_rank возвращает float, но мы его пока не используем
+		var rank float32
 		if err := rows.Scan(&p.ID, &p.URL, &p.Title, &rank); err != nil {
 			return nil, fmt.Errorf("ошибка при сканировании результата поиска: %w", err)
 		}

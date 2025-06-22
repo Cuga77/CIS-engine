@@ -47,6 +47,7 @@ func (i *Indexer) indexNextPage(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	if page == nil {
 		return nil
 	}

@@ -1,0 +1,41 @@
+# k8s/02-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cis-engine-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cis-engine
+  template:
+    metadata:
+      labels:
+        app: cis-engine
+    spec:
+      containers:
+      # Контейнер для API
+      - name: api
+        image: cr.yandex/crpgr1lro1m5lqnt0bb1/cis-engine:v1.2
+        command: ["/api"]
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - secretRef:
+            name: db-secret
+
+      # Контейнер для Краулера
+      - name: crawler
+        image: cr.yandex/crpgr1lro1m5lqnt0bb1/cis-engine:v1.2
+        command: ["/crawler"]
+        envFrom:
+        - secretRef:
+            name: db-secret
+
+      # Контейнер для Индексатора
+      - name: indexer
+        image: cr.yandex/crpgr1lro1m5lqnt0bb1/cis-engine:v1.2
+        command: ["/indexer"]
+        envFrom:
+        - secretRef:
+            name: db-secret

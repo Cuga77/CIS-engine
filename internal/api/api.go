@@ -2,6 +2,7 @@ package api
 
 import (
 	"cis-engine/internal/search"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,7 @@ type Handler struct {
 func NewHandler(ss *search.Service) *Handler {
 	return &Handler{searchService: ss}
 }
+
 func NewRouter(h *Handler) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
@@ -35,6 +37,7 @@ func (h *Handler) searchHandler(c *gin.Context) {
 
 	results, err := h.searchService.Search(c.Request.Context(), query)
 	if err != nil {
+		log.Printf("ERROR: search service failed for query '%s': %v", query, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Внутренняя ошибка сервера"})
 		return
 	}

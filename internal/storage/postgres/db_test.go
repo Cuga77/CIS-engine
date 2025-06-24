@@ -65,4 +65,49 @@ func TestStorePage(t *testing.T) {
 	require.Greater(t, id, int64(0))
 }
 
-// TODO: Добавить тесты для других методов, например, GetNextPageToIndex и SearchPages.
+func TestIndexingAndSearchWorkflow(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+
+	pagesToStore := []*storage.Page{
+		{URL: "https://golang.org", Title: "Go Language", Body: "Go is an open source programming language that makes it easy to build simple, reliable, and efficient software."},
+		{URL: "https://vuejs.org", Title: "Vue.js", Body: "Vue.js is a progressive, incrementally-adoptable JavaScript framework for building UI on the web."},
+		{URL: "https://gobyexample.com", Title: "Go by Example", Body: "A hands-on introduction to Go using annotated example programs. A great resource for learning Go."},
+	}
+	for _, p := range pagesToStore {
+		_, err := db.StorePage(ctx, p)
+		require.NoError(t, err)
+	}
+
+	for {
+		page, err := db.GetNextPageToIndex(ctx)
+		require.NoError(t, err)
+		if page == nil {
+			break
+		}
+		err = db.UpdatePageVector(ctx, page)
+		require.NoError(t, err)
+	}
+
+	t.Run("Поиск по уникальному слову 'framework'", func(t *testing.T) {
+		results, err := db.SearchPages(ctx, "framework")
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+		require.Equal(t, "https://vuejs.org", results[0].URL)
+	})
+
+	t.Run("Поиск по общему слову 'go'", func(t *testing.T) {
+		results, err := db.SearchPages(ctx, "go")
+		require.NoError(t, err)
+		require.Len(t, results, 2)
+		foundURLs := []string{results[0].URL, results[1].URL}
+		require.Contains(t, foundURLs, "https://golang.org")
+		require.Contains(t, foundURLs, "https://gobyexample.com")
+	})
+
+	t.Run("Поиск по несуществующему слову", func(t *testing.T) {
+		results, err := db.SearchPages(ctx, "nonexistentword")
+		require.NoError(t, err)
+		require.Len(t, results, 0)
+	})
+}

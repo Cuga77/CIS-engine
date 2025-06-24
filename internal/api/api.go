@@ -1,19 +1,25 @@
 package api
 
 import (
-	"cis-engine/internal/search"
+	"context"
 	"log"
 	"net/http"
+
+	"cis-engine/internal/search"
 
 	"github.com/gin-gonic/gin"
 )
 
-type Handler struct {
-	searchService *search.Service
+type Searcher interface {
+	Search(ctx context.Context, query string) ([]search.Result, error)
 }
 
-func NewHandler(ss *search.Service) *Handler {
-	return &Handler{searchService: ss}
+type Handler struct {
+	searchService Searcher
+}
+
+func NewHandler(s Searcher) *Handler {
+	return &Handler{searchService: s}
 }
 
 func NewRouter(h *Handler) *gin.Engine {

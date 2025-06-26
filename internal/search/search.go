@@ -45,3 +45,16 @@ func (s *Service) Search(ctx context.Context, query string) ([]Result, error) {
 
 	return results, nil
 }
+
+func (s *Service) ScheduleCrawl(ctx context.Context, url string) error {
+	log.Printf("Получен запрос на сканирование URL: %s", url)
+
+	page := &storage.Page{
+		URL:   url,
+		Title: "Запланировано для сканирования",
+		Body:  "",
+	}
+
+	_, err := s.storage.StorePage(ctx, page)
+	return err
+}

@@ -107,3 +107,13 @@ func (db *DB) SearchPages(ctx context.Context, query string) ([]*storage.Page, e
 
 	return pages, rows.Err()
 }
+
+func (db *DB) GetMetrics(ctx context.Context) (*storage.Metrics, error) {
+	var count int64
+	query := "SELECT COUNT(*) FROM pages"
+	err := db.pool.QueryRow(ctx, query).Scan(&count)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при получении количества страниц: %w", err)
+	}
+	return &storage.Metrics{PagesCount: count}, nil
+}

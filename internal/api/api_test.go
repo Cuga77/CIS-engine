@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"cis-engine/internal/search"
+	"cis-engine/internal/storage"
 
 	"github.com/stretchr/testify/require"
 )
@@ -17,6 +18,7 @@ import (
 type mockSearchService struct {
 	searchFunc        func(ctx context.Context, query string) ([]search.Result, error)
 	scheduleCrawlFunc func(ctx context.Context, url string) error
+	getStatsFunc      func(ctx context.Context) (*storage.Metrics, error)
 }
 
 func (m *mockSearchService) Search(ctx context.Context, query string) ([]search.Result, error) {
@@ -31,6 +33,13 @@ func (m *mockSearchService) ScheduleCrawl(ctx context.Context, url string) error
 		return m.scheduleCrawlFunc(ctx, url)
 	}
 	return errors.New("scheduleCrawlFunc не был определен")
+}
+
+func (m *mockSearchService) GetStats(ctx context.Context) (*storage.Metrics, error) {
+	if m.getStatsFunc != nil {
+		return m.getStatsFunc(ctx)
+	}
+	return nil, errors.New("getStatsFunc не был определен")
 }
 
 func TestSearchHandler(t *testing.T) {
@@ -70,7 +79,6 @@ func TestSearchHandler(t *testing.T) {
 	})
 
 	t.Run("Сервис возвращает ошибку", func(t *testing.T) {
-
 		mockService := &mockSearchService{
 			searchFunc: func(ctx context.Context, query string) ([]search.Result, error) {
 				return nil, errors.New("internal error")
@@ -125,5 +133,44 @@ func TestCrawlHandler(t *testing.T) {
 
 		router.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+}
+
+func TestStatusHandler(t *testing.T) {
+	t.Run("Успешное получение статуса", func(t *testing.T) {
+		mockService := &mockSearchService{
+			getStatsFunc: func(ctx context.Context) (*storage.Metrics, error) {
+				return &storage.Metrics{PagesCount: 123}, nil
+			},
+		}
+		handler := NewHandler(mockService)
+		router := NewRouter(handler)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var stats storage.Metrics
+		err := json.Unmarshal(rec.Body.Bytes(), &stats)
+		require.NoError(t, err)
+		require.Equal(t, int64(123), stats.PagesCount)
+	})
+
+	t.Run("Сервис возвращает ошибку при получении статуса", func(t *testing.T) {
+		mockService := &mockSearchService{
+			getStatsFunc: func(ctx context.Context) (*storage.Metrics, error) {
+				return nil, errors.New("db is down")
+			},
+		}
+		handler := NewHandler(mockService)
+		router := NewRouter(handler)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusInternalServerError, rec.Code)
 	})
 }

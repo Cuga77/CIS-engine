@@ -18,5 +18,10 @@ type Storer interface {
 	GetNextPageToIndex(ctx context.Context) (*Page, error)
 	UpdatePageVector(ctx context.Context, page *Page) error
 	SearchPages(ctx context.Context, query string) ([]*Page, error)
+	GetMetrics(ctx context.Context) (*Metrics, error)
 	Close()
+}
+
+type Metrics struct {
+	PagesCount int64 `json:"pages_count"`
 }

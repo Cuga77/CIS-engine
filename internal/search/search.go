@@ -58,3 +58,8 @@ func (s *Service) ScheduleCrawl(ctx context.Context, url string) error {
 	_, err := s.storage.StorePage(ctx, page)
 	return err
 }
+
+func (s *Service) GetStats(ctx context.Context) (*storage.Metrics, error) {
+	log.Println("Запрос статистики системы")
+	return s.storage.GetMetrics(ctx)
+}

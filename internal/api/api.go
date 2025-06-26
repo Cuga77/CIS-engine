@@ -1,4 +1,3 @@
-// internal/api/api.go
 package api
 
 import (
@@ -7,6 +6,7 @@ import (
 	"net/http"
 
 	"cis-engine/internal/search"
+	"cis-engine/internal/storage"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,6 +14,7 @@ import (
 type Searcher interface {
 	Search(ctx context.Context, query string) ([]search.Result, error)
 	ScheduleCrawl(ctx context.Context, url string) error
+	GetStats(ctx context.Context) (*storage.Metrics, error)
 }
 
 type Handler struct {
@@ -32,6 +33,7 @@ func NewRouter(h *Handler) *gin.Engine {
 	{
 		apiV1.GET("/search", h.searchHandler)
 		apiV1.POST("/crawl", h.crawlHandler)
+		apiV1.GET("/status", h.statusHandler)
 	}
 
 	return router
@@ -43,12 +45,14 @@ func (h *Handler) searchHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Параметр 'q' не может быть пустым"})
 		return
 	}
+
 	results, err := h.searchService.Search(c.Request.Context(), query)
 	if err != nil {
 		log.Printf("ERROR: search service failed for query '%s': %v", query, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Внутренняя ошибка сервера"})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"query": query, "results": results})
 }
 
@@ -74,4 +78,15 @@ func (h *Handler) crawlHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "URL принят в очередь на сканирование."})
+}
+
+func (h *Handler) statusHandler(c *gin.Context) {
+	stats, err := h.searchService.GetStats(c.Request.Context())
+	if err != nil {
+		log.Printf("ERROR: failed to get system stats: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось получить статистику системы"})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }

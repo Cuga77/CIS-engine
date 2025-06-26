@@ -24,5 +24,9 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&apiBaseURL, "api-url", "a", "http://51.250.38.170", "Базовый URL API поискового движка")
+	defaultURL := "http://51.250.38.170"
+	if os.Getenv("CIS_API_URL") != "" {
+		defaultURL = os.Getenv("CIS_API_URL")
+	}
+	rootCmd.PersistentFlags().StringVarP(&apiBaseURL, "api-url", "a", defaultURL, "Базовый URL API поискового движка (можно задать через $CIS_API_URL)")
 }

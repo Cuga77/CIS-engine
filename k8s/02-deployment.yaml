@@ -16,7 +16,7 @@ spec:
       containers:
       # Контейнер для API
       - name: api
-        image: cr.yandex/crpgr1lro1m5lqnt0bb1/cis-engine:v1.2
+        image: cr.yandex/crpgr1lro1m5lqnt0bb1/cis-engine:v1.3
         command: ["/api"]
         ports:
         - containerPort: 8080
@@ -26,7 +26,7 @@ spec:
 
       # Контейнер для Краулера
       - name: crawler
-        image: cr.yandex/crpgr1lro1m5lqnt0bb1/cis-engine:v1.2
+        image: cr.yandex/crpgr1lro1m5lqnt0bb1/cis-engine:v1.3
         command: ["/crawler"]
         envFrom:
         - secretRef:
@@ -34,7 +34,7 @@ spec:
 
       # Контейнер для Индексатора
       - name: indexer
-        image: cr.yandex/crpgr1lro1m5lqnt0bb1/cis-engine:v1.2
+        image: cr.yandex/crpgr1lro1m5lqnt0bb1/cis-engine:v1.3
         command: ["/indexer"]
         envFrom:
         - secretRef:

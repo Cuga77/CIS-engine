@@ -8,6 +8,8 @@ import (
 )
 
 var (
+	version = "dev"
+
 	rootCmd = &cobra.Command{
 		Use:   "cis-cli",
 		Short: "CLI для взаимодействия с поисковым движком CIS",
@@ -24,9 +26,9 @@ func Execute() {
 }
 
 func init() {
-	defaultURL := "http://51.250.38.170"
-	if os.Getenv("CIS_API_URL") != "" {
-		defaultURL = os.Getenv("CIS_API_URL")
+	defaultURL := os.Getenv("CIS_API_URL")
+	if defaultURL == "" {
+		defaultURL = "http://51.250.38.170"
 	}
 	rootCmd.PersistentFlags().StringVarP(&apiBaseURL, "api-url", "a", defaultURL, "Базовый URL API поискового движка (можно задать через $CIS_API_URL)")
 }

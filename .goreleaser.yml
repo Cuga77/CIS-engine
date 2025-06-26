@@ -19,7 +19,7 @@ builds:
     binary: cis-cli
     # Флаги, передаваемые компилятору Go для уменьшения размера бинарного файла.
     ldflags:
-      - -s -w
+      - -s -w -X cis-engine/internal/cli.version={{.Version}}
     # Целевые платформы для кросс-компиляции.
     goos:
       - linux

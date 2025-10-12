@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"cis-engine/internal/api"
 	"cis-engine/internal/search"
+	"cis-engine/internal/server"
 	"cis-engine/internal/storage/postgres"
 
 	"github.com/joho/godotenv"
@@ -31,8 +31,8 @@ func main() {
 	log.Println("Успешное подключение к базе данных.")
 
 	searchService := search.NewService(db)
-	apiHandler := api.NewHandler(searchService)
-	router := api.NewRouter(apiHandler)
+	apiHandler := server.NewHandler(searchService)
+	router := server.NewRouter(apiHandler)
 
 	serverAddr := ":8080"
 	log.Printf("Запуск API сервера на http://localhost%s", serverAddr)

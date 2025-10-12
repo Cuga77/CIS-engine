@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS build
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
@@ -13,6 +13,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /indexer ./cmd/indexer
 
 FROM alpine:latest
 
-COPY --from=build /api /api
-COPY --from=build /crawler /crawler
-COPY --from=build /indexer /indexer
+RUN apk --no-cache add ca-certificates
+COPY YandexInternalRootCA.pem /usr/local/share/ca-certificates/YandexInternalRootCA.crt
+RUN update-ca-certificates
+
+COPY --from=builder /api /api
+COPY --from=builder /crawler /crawler
+COPY --from=builder /indexer /indexer

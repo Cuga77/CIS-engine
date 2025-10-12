@@ -73,23 +73,23 @@ func (c *Crawler) AddJob(url string) {
 
 func (c *Crawler) worker(ctx context.Context, id int) {
 	defer c.wg.Done()
-	log.Printf("Worker %d started", id)
+	log.Printf("Воркер %d запущен", id)
 
 	for jobURL := range c.jobs {
 		if !c.visited.AddIfNotExists(jobURL) {
 			continue
 		}
 
-		log.Printf("Worker %d: processing %s", id, jobURL)
+		log.Printf("Воркер %d: обрабатывает %s", id, jobURL)
 
 		if err := c.limiter.Wait(ctx); err != nil {
-			log.Printf("Worker %d stopped due to limiter error: %v", id, err)
+			log.Printf("Воркер %d остановлен из-за ошибки ограничителя: %v", id, err)
 			break
 		}
 
 		body, err := c.fetcher.Fetch(ctx, jobURL)
 		if err != nil {
-			log.Printf("Error fetching URL %s: %v", jobURL, err)
+			log.Printf("Ошибка загрузки URL %s: %v", jobURL, err)
 			continue
 		}
 
@@ -106,7 +106,7 @@ func (c *Crawler) worker(ctx context.Context, id int) {
 			c.AddJob(link)
 		}
 	}
-	log.Printf("Worker %d finished", id)
+	log.Printf("Воркер %d завершает работу", id)
 }
 
 func (c *Crawler) processResults(ctx context.Context) {
@@ -119,9 +119,9 @@ func (c *Crawler) processResults(ctx context.Context) {
 			Body:  page.Body,
 		}
 		if _, err := c.storage.StorePage(ctx, pageToStore); err != nil {
-			log.Printf("Error storing page %s: %v", page.URL, err)
+			log.Printf("Ошибка сохранения страницы %s: %v", page.URL, err)
 		} else {
-			log.Printf("Page %s stored successfully", page.URL)
+			log.Printf("Страница %s успешно сохранена", page.URL)
 		}
 	}
 }
@@ -129,60 +129,45 @@ func (c *Crawler) processResults(ctx context.Context) {
 func (c *Crawler) parseHTML(baseURL string, body io.Reader) (string, string, []string) {
 	doc, err := html.Parse(body)
 	if err != nil {
-		log.Printf("Error parsing HTML for %s: %v", baseURL, err)
+		log.Printf("Ошибка парсинга HTML для %s: %v", baseURL, err)
 		return "", "", nil
 	}
 
-	title := extractTitle(doc)
-	text := extractText(doc)
-	links := extractLinks(doc, baseURL)
-
-	return strings.TrimSpace(title), strings.Join(strings.Fields(text), " "), links
-}
-
-func extractTitle(n *html.Node) string {
-	if n.Type == html.ElementNode && n.Data == "title" && n.FirstChild != nil {
-		return n.FirstChild.Data
-	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if title := extractTitle(c); title != "" {
-			return title
-		}
-	}
-	return ""
-}
-
-func extractText(n *html.Node) string {
-	if n.Type == html.ElementNode && (n.Data == "script" || n.Data == "style") {
-		return ""
-	}
+	var title string
 	var text strings.Builder
-	if n.Type == html.TextNode {
-		text.WriteString(n.Data)
-		text.WriteString(" ")
-	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		text.WriteString(extractText(c))
-	}
-	return text.String()
-}
-
-func extractLinks(n *html.Node, baseURL string) []string {
 	var links []string
-	if n.Type == html.ElementNode && n.Data == "a" {
-		for _, a := range n.Attr {
-			if a.Key == "href" {
-				if resolvedURL, err := resolveURL(baseURL, a.Val); err == nil {
-					links = append(links, resolvedURL)
-				}
-				break
+
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode {
+			if n.Data == "title" && n.FirstChild != nil {
+				title = n.FirstChild.Data
 			}
+			if n.Data == "script" || n.Data == "style" {
+				return
+			}
+			if n.Data == "a" {
+				for _, a := range n.Attr {
+					if a.Key == "href" {
+						if resolvedURL, err := resolveURL(baseURL, a.Val); err == nil {
+							links = append(links, resolvedURL)
+						}
+						break
+					}
+				}
+			}
+		} else if n.Type == html.TextNode {
+			text.WriteString(n.Data)
+			text.WriteString(" ")
+		}
+
+		for child := n.FirstChild; child != nil; child = child.NextSibling {
+			f(child)
 		}
 	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		links = append(links, extractLinks(c, baseURL)...)
-	}
-	return links
+
+	f(doc)
+	return strings.TrimSpace(title), strings.Join(strings.Fields(text.String()), " "), links
 }
 
 var errNotHttp = errors.New("non-http scheme")

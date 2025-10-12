@@ -1,12 +1,12 @@
-package server
+package api
 
 import (
 	"context"
-	"cis-engine/internal/search"
-	"cis-engine/internal/storage"
 	"log"
 	"net/http"
-	"net/url"
+
+	"cis-engine/internal/search"
+	"cis-engine/internal/storage"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,7 +29,7 @@ func NewRouter(h *Handler) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
-	router.Use(errorHandler)
+	router.StaticFS("/search", http.Dir("web/static"))
 
 	apiV1 := router.Group("/api/v1")
 	{
@@ -44,14 +44,14 @@ func NewRouter(h *Handler) *gin.Engine {
 func (h *Handler) searchHandler(c *gin.Context) {
 	query := c.Query("q")
 	if query == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "query parameter 'q' cannot be empty"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Параметр 'q' не может быть пустым"})
 		return
 	}
 
 	results, err := h.searchService.Search(c.Request.Context(), query)
 	if err != nil {
 		log.Printf("ERROR: search service failed for query '%s': %v", query, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Внутренняя ошибка сервера"})
 		return
 	}
 
@@ -64,47 +64,31 @@ func (h *Handler) crawlHandler(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format, expected JSON with 'url' field"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат запроса. Ожидается JSON с полем 'url'."})
 		return
 	}
 
-	if _, err := url.ParseRequestURI(request.URL); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid URL format"})
+	if request.URL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Поле 'url' не может быть пустым."})
 		return
 	}
 
 	if err := h.searchService.ScheduleCrawl(c.Request.Context(), request.URL); err != nil {
 		log.Printf("ERROR: failed to schedule crawl for url '%s': %v", request.URL, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add URL to the queue"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось добавить URL в очередь"})
 		return
 	}
 
-	c.JSON(http.StatusAccepted, gin.H{"message": "URL accepted for scanning"})
+	c.JSON(http.StatusAccepted, gin.H{"message": "URL принят в очередь на сканирование."})
 }
 
 func (h *Handler) statusHandler(c *gin.Context) {
 	stats, err := h.searchService.GetStats(c.Request.Context())
 	if err != nil {
 		log.Printf("ERROR: failed to get system stats: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get system statistics"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось получить статистику системы"})
 		return
 	}
 
 	c.JSON(http.StatusOK, stats)
-}
-
-func errorHandler(c *gin.Context) {
-	c.Next()
-
-	if len(c.Errors) > 0 {
-		// Log errors
-		for _, e := range c.Errors {
-			log.Printf("ERROR: %v", e.Err)
-		}
-
-		// Return a generic error message
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "internal server error",
-		})
-	}
 }

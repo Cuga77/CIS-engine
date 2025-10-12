@@ -8,8 +8,8 @@ import (
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Show the CLI version",
-	Long:  `Prints the version number of the cis-cli binary.`,
+	Short: "Показать версию CLI",
+	Long:  `Выводит номер версии бинарного файла cis-cli.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("cis-cli version: %s\n", version)
 	},

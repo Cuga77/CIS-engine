@@ -4,7 +4,6 @@ package postgres
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -18,10 +17,9 @@ import (
 )
 
 func setupTestDB(t *testing.T) *DB {
-	if os.Getenv("RUN_DOCKER_TESTS") != "true" {
-		t.Skip("Skipping Docker-dependent tests. Set RUN_DOCKER_TESTS=true to run them.")
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
 	}
-
 	ctx := context.Background()
 
 	schemaPath, err := filepath.Abs("../schema.sql")

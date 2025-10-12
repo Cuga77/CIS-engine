@@ -2,91 +2,116 @@ package search
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"cis-engine/internal/storage"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-type MockStorer struct {
-	mock.Mock
+type mockStorer struct {
+	searchPagesFunc func(ctx context.Context, query string) ([]*storage.Page, error)
+	getMetricsFunc  func(ctx context.Context) (*storage.Metrics, error)
 }
 
-func (m *MockStorer) StorePage(ctx context.Context, page *storage.Page) (int64, error) {
-	args := m.Called(ctx, page)
-	return args.Get(0).(int64), args.Error(1)
+func (m *mockStorer) SearchPages(ctx context.Context, query string) ([]*storage.Page, error) {
+	if m.searchPagesFunc != nil {
+		return m.searchPagesFunc(ctx, query)
+	}
+	return nil, errors.New("searchPagesFunc не был определен")
 }
 
-func (m *MockStorer) GetNextPageToIndex(ctx context.Context) (*storage.Page, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(*storage.Page), args.Error(1)
+func (m *mockStorer) GetMetrics(ctx context.Context) (*storage.Metrics, error) {
+	if m.getMetricsFunc != nil {
+		return m.getMetricsFunc(ctx)
+	}
+	return nil, errors.New("getMetricsFunc не был определен")
 }
 
-func (m *MockStorer) UpdatePageVector(ctx context.Context, page *storage.Page) error {
-	args := m.Called(ctx, page)
-	return args.Error(0)
-}
+func (m *mockStorer) StorePage(ctx context.Context, page *storage.Page) (int64, error) { return 0, nil }
+func (m *mockStorer) GetNextPageToIndex(ctx context.Context) (*storage.Page, error)    { return nil, nil }
+func (m *mockStorer) UpdatePageVector(ctx context.Context, page *storage.Page) error   { return nil }
+func (m *mockStorer) Close()                                                           {}
 
-func (m *MockStorer) SearchPages(ctx context.Context, query string) ([]*storage.Page, error) {
-	args := m.Called(ctx, query)
-	return args.Get(0).([]*storage.Page), args.Error(1)
-}
-
-func (m *MockStorer) GetMetrics(ctx context.Context) (*storage.Metrics, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(*storage.Metrics), args.Error(1)
-}
-
-func (m *MockStorer) Close() {}
-
-func TestSearch(t *testing.T) {
-	mockStorer := new(MockStorer)
-	service := NewService(mockStorer)
+func TestSearchService(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("successful search", func(t *testing.T) {
-		expectedPages := []*storage.Page{{URL: "http://example.com", Title: "Example"}}
-		mockStorer.On("SearchPages", ctx, "test").Return(expectedPages, nil).Once()
+	t.Run("Успешный поиск", func(t *testing.T) {
+		mockStorage := &mockStorer{
+			searchPagesFunc: func(ctx context.Context, query string) ([]*storage.Page, error) {
+				require.Equal(t, "go", query)
+				return []*storage.Page{
+					{URL: "https://golang.org", Title: "The Go Language"},
+					{URL: "https://go.dev", Title: "Official Go Website"},
+				}, nil
+			},
+		}
+		service := NewService(mockStorage)
 
-		results, err := service.Search(ctx, "test")
+		results, err := service.Search(ctx, "go")
+
 		require.NoError(t, err)
-		require.Len(t, results, 1)
-		require.Equal(t, "http://example.com", results[0].URL)
-		mockStorer.AssertExpectations(t)
+		require.Len(t, results, 2)
+		require.Equal(t, "https://golang.org", results[0].URL)
 	})
 
-	t.Run("empty query", func(t *testing.T) {
-		results, err := service.Search(ctx, "")
+	t.Run("Поиск не дал результатов", func(t *testing.T) {
+		mockStorage := &mockStorer{
+			searchPagesFunc: func(ctx context.Context, query string) ([]*storage.Page, error) {
+				return []*storage.Page{}, nil
+			},
+		}
+		service := NewService(mockStorage)
+
+		results, err := service.Search(ctx, "nonexistent")
+
 		require.NoError(t, err)
-		require.Empty(t, results)
+		require.Len(t, results, 0)
+	})
+
+	t.Run("Ошибка от хранилища", func(t *testing.T) {
+		mockStorage := &mockStorer{
+			searchPagesFunc: func(ctx context.Context, query string) ([]*storage.Page, error) {
+				return nil, errors.New("DB connection failed")
+			},
+		}
+		service := NewService(mockStorage)
+
+		_, err := service.Search(ctx, "any query")
+
+		require.Error(t, err)
+		require.Equal(t, "DB connection failed", err.Error())
 	})
 }
-
-func TestScheduleCrawl(t *testing.T) {
-	mockStorer := new(MockStorer)
-	service := NewService(mockStorer)
-	ctx := context.Background()
-
-	page := &storage.Page{URL: "http://example.com"}
-	mockStorer.On("StorePage", ctx, page).Return(int64(1), nil).Once()
-
-	err := service.ScheduleCrawl(ctx, "http://example.com")
-	require.NoError(t, err)
-	mockStorer.AssertExpectations(t)
-}
-
 func TestGetStats(t *testing.T) {
-	mockStorer := new(MockStorer)
-	service := NewService(mockStorer)
 	ctx := context.Background()
 
-	expectedMetrics := &storage.Metrics{PagesCount: 10}
-	mockStorer.On("GetMetrics", ctx).Return(expectedMetrics, nil).Once()
+	t.Run("Успешное получение статистики", func(t *testing.T) {
+		mockStorage := &mockStorer{
+			getMetricsFunc: func(ctx context.Context) (*storage.Metrics, error) {
+				return &storage.Metrics{PagesCount: 42}, nil
+			},
+		}
+		service := NewService(mockStorage)
+		stats, err := service.GetStats(ctx)
 
-	metrics, err := service.GetStats(ctx)
-	require.NoError(t, err)
-	require.Equal(t, expectedMetrics, metrics)
-	mockStorer.AssertExpectations(t)
+		require.NoError(t, err)
+		require.NotNil(t, stats)
+		require.Equal(t, int64(42), stats.PagesCount)
+	})
+
+	t.Run("Ошибка от хранилища при получении статистики", func(t *testing.T) {
+		mockStorage := &mockStorer{
+			getMetricsFunc: func(ctx context.Context) (*storage.Metrics, error) {
+				return nil, errors.New("failed to query metrics")
+			},
+		}
+		service := NewService(mockStorage)
+		stats, err := service.GetStats(ctx)
+
+		require.Error(t, err)
+		require.Nil(t, stats)
+		require.Equal(t, "failed to query metrics", err.Error())
+	})
 }

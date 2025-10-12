@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIS-engine | Поиск</title>
+    <!-- Подключаем Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Подключаем HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Стили для индикатора загрузки HTMX */
+        .htmx-request .loader {
+            display: flex;
+        }
+
+        .htmx-request.loader {
+            display: flex;
+        }
+
+        /* Анимация появления результатов */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-200 flex flex-col items-center min-h-screen p-4 pt-16">
+
+    <div class="w-full max-w-2xl">
+        <!-- Заголовок -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white">
+                CIS<span class="text-blue-400">-engine</span>
+            </h1>
+            <p class="text-gray-400 mt-2">Высокопроизводительный поисковой движок на Go</p>
+        </header>
+
+        <!-- Форма поиска с атрибутами HTMX -->
+        <div class="relative">
+            <input type="search" name="q" id="search-input" placeholder="Введите поисковый запрос..."
+                class="w-full px-5 py-3 pr-12 text-lg bg-gray-800 border-2 border-gray-700 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+                hx-get="/api/v1/search" hx-trigger="keyup changed delay:500ms, search" hx-target="#search-results"
+                hx-indicator="#loader">
+            <div id="loader"
+                class="absolute inset-y-0 right-0 items-center justify-center w-12 h-full text-gray-400 hidden">
+                <!-- Простой спиннер -->
+                <div class="w-5 h-5 border-2 border-t-blue-400 border-gray-600 rounded-full animate-spin"></div>
+            </div>
+        </div>
+
+        <!-- Область для вывода результатов -->
+        <div id="search-results" class="mt-8 space-y-4">
+            <!-- Сюда HTMX будет вставлять ответ от сервера -->
+        </div>
+    </div>
+
+</body>
+
+</html>

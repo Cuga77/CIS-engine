@@ -1,23 +1,18 @@
-FROM golang:1.24-alpine AS builde
+FROM golang:1.24-alpine AS build
 
 WORKDIR /app
+
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /bin/api     ./cmd/api/main.go
-RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /bin/crawler ./cmd/crawler/main.go
-RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /bin/indexer ./cmd/indexer/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /crawler ./cmd/crawler
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /indexer ./cmd/indexer
 
-FROM gcr.io/distroless/static-debian12 AS final
+FROM alpine:latest
 
-RUN groupadd --system nonroot && \
-    useradd --system --gid nonroot nonroot
-
-COPY --from=builder /bin/api /api
-COPY --from=builder /bin/crawler /crawler
-COPY --from=builder /bin/indexer /indexer
-COPY --from=builder --chown=nonroot:nonroot /app/frontend /frontend
-
-USER nonroot
+COPY --from=build /api /api
+COPY --from=build /crawler /crawler
+COPY --from=build /indexer /indexer

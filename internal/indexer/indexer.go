@@ -22,16 +22,16 @@ func NewIndexer(s storage.Storer, interval time.Duration) *Indexer {
 }
 
 func (i *Indexer) Start(ctx context.Context) {
-	log.Println("Сервис индексации запущен.")
+	log.Println("Starting indexer service.")
 	for {
 		select {
-		case <-i.doneChan:
-			log.Println("Сервис индексации остановлен.")
+		case <-ctx.Done():
+			log.Println("Stopping indexer service.")
 			return
 		case <-i.ticker.C:
 			err := i.indexNextPage(ctx)
 			if err != nil {
-				log.Printf("Ошибка при индексации страницы: %v", err)
+				log.Printf("Error while indexing page: %v", err)
 			}
 		}
 	}
@@ -52,7 +52,7 @@ func (i *Indexer) indexNextPage(ctx context.Context) error {
 		return nil
 	}
 
-	log.Printf("Индексируется страница #%d (%s)", page.ID, page.URL)
+	log.Printf("Indexing page #%d (%s)", page.ID, page.URL)
 
 	return i.storage.UpdatePageVector(ctx, page)
 }

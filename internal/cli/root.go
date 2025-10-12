@@ -12,15 +12,15 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:   "cis-cli",
-		Short: "CLI для взаимодействия с поисковым движком CIS",
-		Long:  `cis-cli - это инструмент командной строки для поиска документов и управления поисковым движком CIS.`,
+		Short: "A CLI for interacting with the CIS search engine",
+		Long:  `cis-cli is a command-line tool for searching documents and managing the CIS search engine.`,
 	}
 	apiBaseURL string
 )
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Ошибка при выполнении CLI: '%s'", err)
+		fmt.Fprintf(os.Stderr, "Error while executing CLI: '%s'", err)
 		os.Exit(1)
 	}
 }
@@ -28,7 +28,7 @@ func Execute() {
 func init() {
 	defaultURL := os.Getenv("CIS_API_URL")
 	if defaultURL == "" {
-		defaultURL = "http://51.250.38.170"
+		defaultURL = "http://localhost:8081"
 	}
-	rootCmd.PersistentFlags().StringVarP(&apiBaseURL, "api-url", "a", defaultURL, "Базовый URL API поискового движка (можно задать через $CIS_API_URL)")
+	rootCmd.PersistentFlags().StringVarP(&apiBaseURL, "api-url", "a", defaultURL, "Base URL for the search engine API (can be set via $CIS_API_URL)")
 }

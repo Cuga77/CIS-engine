@@ -23,7 +23,7 @@ func (s *Service) Search(ctx context.Context, query string) ([]Result, error) {
 	if query == "" {
 		return []Result{}, nil
 	}
-	log.Printf("Поисковый запрос: '%s'", query)
+	log.Printf("Searching for query: '%s'", query)
 
 	pages, err := s.storage.SearchPages(ctx, query)
 	if err != nil {
@@ -31,7 +31,7 @@ func (s *Service) Search(ctx context.Context, query string) ([]Result, error) {
 	}
 
 	if len(pages) == 0 {
-		log.Printf("Результаты для запроса '%s' не найдены", query)
+		log.Printf("No results found for query: '%s'", query)
 		return []Result{}, nil
 	}
 
@@ -47,12 +47,10 @@ func (s *Service) Search(ctx context.Context, query string) ([]Result, error) {
 }
 
 func (s *Service) ScheduleCrawl(ctx context.Context, url string) error {
-	log.Printf("Получен запрос на сканирование URL: %s", url)
+	log.Printf("Received request to crawl URL: %s", url)
 
 	page := &storage.Page{
-		URL:   url,
-		Title: "Запланировано для сканирования",
-		Body:  "",
+		URL: url,
 	}
 
 	_, err := s.storage.StorePage(ctx, page)
@@ -60,6 +58,6 @@ func (s *Service) ScheduleCrawl(ctx context.Context, url string) error {
 }
 
 func (s *Service) GetStats(ctx context.Context) (*storage.Metrics, error) {
-	log.Println("Запрос статистики системы")
+	log.Println("Requesting system statistics")
 	return s.storage.GetMetrics(ctx)
 }

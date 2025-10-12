@@ -1,0 +1,21 @@
+<!-- frontend/results.html -->
+<!-- Этот файл является Go-шаблоном. Он будет обработан на сервере. -->
+
+{{if .Results}}
+<!-- Если результаты есть, перебираем их и выводим -->
+{{range .Results}}
+<div class="bg-gray-800/50 p-5 rounded-lg border border-gray-700 hover:border-blue-500 transition-all animate-fade-in">
+    <a href="{{.URL}}" target="_blank" rel="noopener noreferrer"
+        class="text-xl font-semibold text-blue-400 hover:underline">
+        {{if .Title}}{{.Title}}{{else}}Без заголовка{{end}}
+    </a>
+    <p class="text-sm text-gray-400 mt-1 truncate">{{.URL}}</p>
+</div>
+{{end}}
+{{else}}
+<!-- Если результатов нет, выводим сообщение -->
+<div class="text-center text-gray-500 py-8 animate-fade-in">
+    <p class="text-lg">Ничего не найдено.</p>
+    <p>Попробуйте изменить поисковый запрос.</p>
+</div>
+{{end}}

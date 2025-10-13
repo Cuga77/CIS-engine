@@ -34,8 +34,9 @@ func main() {
 	apiHandler := api.NewHandler(searchService)
 	router := api.NewRouter(apiHandler)
 
-	serverAddr := ":8080"
+	serverAddr := ":8081"
 	log.Printf("Запуск API сервера на http://localhost%s", serverAddr)
+	log.Printf("Веб-интерфейс доступен по адресу: http://localhost%s/search", serverAddr)
 	if err := router.Run(serverAddr); err != nil {
 		log.Fatalf("Не удалось запустить сервер: %v", err)
 	}

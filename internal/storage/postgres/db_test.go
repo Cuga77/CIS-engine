@@ -17,6 +17,9 @@ import (
 )
 
 func setupTestDB(t *testing.T) *DB {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 	ctx := context.Background()
 
 	schemaPath, err := filepath.Abs("../schema.sql")

@@ -29,7 +29,7 @@ func NewRouter(h *Handler) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
-	router.StaticFS("/search", http.Dir("web/static"))
+	router.StaticFS("/search/", http.Dir("web/static"))
 
 	apiV1 := router.Group("/api/v1")
 	{

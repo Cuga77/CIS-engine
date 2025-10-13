@@ -13,6 +13,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /indexer ./cmd/indexer
 
 FROM alpine:latest
 
+COPY --from=builder /app/web ./web
 COPY --from=builder /api /api
 COPY --from=builder /crawler /crawler
 COPY --from=builder /indexer /indexer
